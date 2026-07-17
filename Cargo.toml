@@ -1,0 +1,17 @@
+[package]
+name = "wol"
+version = "0.1.0"
+edition = "2021"
+description = "Wake-on-LAN CLI tool"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+socket2 = "0.5"
+thiserror = "2"
+
+[dev-dependencies]
+assert_cmd = "2"
+tempfile = "3"
