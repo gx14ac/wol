@@ -1,6 +1,8 @@
 # wol
 
-A Wake-on-LAN CLI tool written in Rust. Sends magic packets over UDP to wake devices on your network.
+A Wake-on-LAN CLI tool written in Rust. Sends magic packets over UDP to wake devices on your network, with a built-in web UI and scheduled wake-ups.
+
+**[日本語ドキュメント](docs/usage_ja.md)**
 
 ## Installation
 
@@ -10,37 +12,47 @@ Download a pre-built binary from [Releases](https://github.com/gx14ac/wol/releas
 cargo install --path .
 ```
 
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `wol send` | Send a magic packet to wake a device |
+| `wol list` | List configured machines |
+| `wol serve` | Start web UI with status monitoring and scheduled wake-ups |
+
 ## Usage
 
-### Send a magic packet by MAC address
+### Send a magic packet
 
 ```bash
 wol send --mac aa:bb:cc:dd:ee:ff
-```
-
-### Specify broadcast address and port
-
-```bash
 wol send --mac aa:bb:cc:dd:ee:ff --broadcast 192.168.1.255 --port 9
-```
-
-### Send by machine name (requires config)
-
-```bash
-wol send --name desktop --config config.yaml
+wol --config config.yaml send --name desktop
 ```
 
 ### List configured machines
 
 ```bash
-wol list --config config.yaml
+wol --config config.yaml list
 ```
+
+### Start web server
+
+```bash
+wol --config config.yaml serve
+```
+
+Opens a web UI at `http://localhost:7777` with:
+- Real-time machine status (online/offline via ICMP ping, updated every 5s)
+- One-click wake button per machine
+- Cron-based scheduled wake-ups
 
 ## Configuration
 
 Create a `config.yaml` (see `config.example.yaml`):
 
 ```yaml
+listen: "0.0.0.0:7777"
 broadcast: "255.255.255.255"
 port: 9
 
@@ -50,8 +62,13 @@ machines:
     ip: "192.168.1.100"
   - name: server
     mac: "11:22:33:44:55:66"
+    ip: "192.168.1.200"
     broadcast: "10.0.0.255"
     port: 7
+
+schedules:
+  - machine: desktop
+    cron: "0 30 8 * * Mon-Fri"
 ```
 
 Config file search order (first found wins):
@@ -59,7 +76,14 @@ Config file search order (first found wins):
 2. `$XDG_CONFIG_HOME/wol/config.yaml` (Linux) / `~/Library/Application Support/wol/config.yaml` (macOS) / `%APPDATA%\wol\config.yaml` (Windows)
 3. `./config.yaml` (current directory)
 
-Per-machine `broadcast` and `port` override the global defaults.
+### API endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Web UI |
+| GET | `/api/machines` | Machine statuses as JSON |
+| POST | `/api/wake` | Send magic packet (`{"name": "desktop"}`) |
+| GET | `/api/status` | SSE stream of machine statuses |
 
 ## How it works
 

@@ -1,13 +1,18 @@
 mod config;
 mod magic_packet;
+mod ping;
+mod scheduler;
+mod server;
 
 use std::path::PathBuf;
 use std::process;
+use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
 
 use config::Config;
 use magic_packet::MagicPacket;
+use scheduler::Scheduler;
 
 #[derive(Parser)]
 #[command(name = "wol", version, about = "Wake-on-LAN CLI tool")]
@@ -37,6 +42,8 @@ enum Commands {
     },
     /// List configured machines
     List,
+    /// Start web server with status monitoring and scheduled wake-ups
+    Serve,
 }
 
 fn main() {
@@ -52,6 +59,7 @@ fn main() {
             port,
         } => cmd_send(config, mac, name, broadcast, port),
         Commands::List => cmd_list(config),
+        Commands::Serve => cmd_serve(config),
     }
 }
 
@@ -196,4 +204,31 @@ fn cmd_list(config: Option<Config>) {
         let addr = cfg.resolve_broadcast(machine);
         println!("{:<15} {:<20} {}", machine.name, machine.mac, addr);
     }
+}
+
+fn cmd_serve(config: Option<Config>) {
+    let cfg = match config {
+        Some(c) => c,
+        None => {
+            eprintln!("error: 'serve' requires a config file");
+            process::exit(1);
+        }
+    };
+
+    let config = Arc::new(cfg);
+
+    let sched = Scheduler::new(config.clone());
+    if let Err(e) = sched.validate() {
+        eprintln!("error: {}", e);
+        process::exit(1);
+    }
+
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        tokio::spawn(async move {
+            sched.run().await;
+        });
+
+        server::run_server(config).await;
+    });
 }

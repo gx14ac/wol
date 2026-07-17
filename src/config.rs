@@ -10,15 +10,18 @@ pub struct Config {
     pub broadcast: String,
     #[serde(default = "default_port")]
     pub port: u16,
+    #[serde(default = "default_listen")]
+    pub listen: String,
     #[serde(default)]
     pub machines: Vec<Machine>,
+    #[serde(default)]
+    pub schedules: Vec<Schedule>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Machine {
     pub name: String,
     pub mac: String,
-    #[allow(dead_code)]
     #[serde(default)]
     pub ip: Option<String>,
     #[serde(default)]
@@ -27,12 +30,22 @@ pub struct Machine {
     pub port: Option<u16>,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct Schedule {
+    pub machine: String,
+    pub cron: String,
+}
+
 fn default_broadcast() -> String {
     "255.255.255.255".to_string()
 }
 
 fn default_port() -> u16 {
     9
+}
+
+fn default_listen() -> String {
+    "0.0.0.0:7777".to_string()
 }
 
 impl Config {
@@ -59,7 +72,9 @@ impl Default for Config {
         Self {
             broadcast: default_broadcast(),
             port: default_port(),
+            listen: default_listen(),
             machines: Vec::new(),
+            schedules: Vec::new(),
         }
     }
 }
@@ -106,6 +121,7 @@ machines:
         let config = Config::load(f.path()).unwrap();
         assert_eq!(config.broadcast, "255.255.255.255");
         assert_eq!(config.port, 9);
+        assert_eq!(config.listen, "0.0.0.0:7777");
     }
 
     #[test]
@@ -148,5 +164,27 @@ machines:
             port: Some(7),
         };
         assert_eq!(config.resolve_broadcast(&machine), "10.0.0.255:7");
+    }
+
+    #[test]
+    fn test_load_with_schedules() {
+        let mut f = NamedTempFile::new().unwrap();
+        writeln!(
+            f,
+            r#"
+machines:
+  - name: desktop
+    mac: "aa:bb:cc:dd:ee:ff"
+schedules:
+  - machine: desktop
+    cron: "0 30 8 * * Mon-Fri"
+"#
+        )
+        .unwrap();
+
+        let config = Config::load(f.path()).unwrap();
+        assert_eq!(config.schedules.len(), 1);
+        assert_eq!(config.schedules[0].machine, "desktop");
+        assert_eq!(config.schedules[0].cron, "0 30 8 * * Mon-Fri");
     }
 }

@@ -1,3 +1,4 @@
+listen: "0.0.0.0:7777"
 broadcast: "255.255.255.255"
 port: 9
 
@@ -7,5 +8,10 @@ machines:
     ip: "192.168.1.100"
   - name: server
     mac: "11:22:33:44:55:66"
+    ip: "192.168.1.200"
     broadcast: "10.0.0.255"
     port: 7
+
+schedules:
+  - machine: desktop
+    cron: "0 30 8 * * Mon-Fri"
