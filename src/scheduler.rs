@@ -53,7 +53,7 @@ impl Scheduler {
 
                 if let Some(next) = cron.upcoming(Utc).next() {
                     let diff = (next - now).num_seconds();
-                    if diff <= 30 && diff >= 0 {
+                    if (0..=30).contains(&diff) {
                         self.wake_machine(&schedule.machine);
                     }
                 }
