@@ -199,7 +199,7 @@ fn cmd_list(config: Option<Config>) {
         return;
     }
 
-    println!("{:<15} {:<20} {}", "NAME", "MAC", "BROADCAST");
+    println!("{:<15} {:<20} BROADCAST", "NAME", "MAC");
     for machine in &cfg.machines {
         let addr = cfg.resolve_broadcast(machine);
         println!("{:<15} {:<20} {}", machine.name, machine.mac, addr);

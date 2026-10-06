@@ -16,6 +16,10 @@ pub struct Config {
     pub machines: Vec<Machine>,
     #[serde(default)]
     pub schedules: Vec<Schedule>,
+    /// Base URL of the runetale dashboard. Set it to offer a remote desktop
+    /// link for machines that carry a `runetale_ip`.
+    #[serde(default)]
+    pub runetale_dashboard: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -28,6 +32,10 @@ pub struct Machine {
     pub broadcast: Option<String>,
     #[serde(default)]
     pub port: Option<u16>,
+    /// Overlay address this machine answers on inside the mesh. Distinct from
+    /// `ip`, which is the LAN address used to wake and ping it.
+    #[serde(default)]
+    pub runetale_ip: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -51,8 +59,8 @@ fn default_listen() -> String {
 impl Config {
     pub fn load(path: &Path) -> Result<Self, MagicPacketError> {
         let content = std::fs::read_to_string(path).map_err(MagicPacketError::Io)?;
-        let config: Config =
-            serde_yaml::from_str(&content).map_err(|e| MagicPacketError::InvalidConfig(e.to_string()))?;
+        let config: Config = serde_yaml::from_str(&content)
+            .map_err(|e| MagicPacketError::InvalidConfig(e.to_string()))?;
         Ok(config)
     }
 
@@ -75,6 +83,7 @@ impl Default for Config {
             listen: default_listen(),
             machines: Vec::new(),
             schedules: Vec::new(),
+            runetale_dashboard: None,
         }
     }
 }
@@ -133,6 +142,7 @@ machines:
                 ip: None,
                 broadcast: None,
                 port: None,
+                runetale_ip: None,
             }],
             ..Default::default()
         };
@@ -149,6 +159,7 @@ machines:
             ip: None,
             broadcast: None,
             port: None,
+            runetale_ip: None,
         };
         assert_eq!(config.resolve_broadcast(&machine), "255.255.255.255:9");
     }
@@ -162,6 +173,7 @@ machines:
             ip: None,
             broadcast: Some("10.0.0.255".to_string()),
             port: Some(7),
+            runetale_ip: None,
         };
         assert_eq!(config.resolve_broadcast(&machine), "10.0.0.255:7");
     }
